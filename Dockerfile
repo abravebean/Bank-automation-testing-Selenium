@@ -14,5 +14,6 @@ RUN npm install
 COPY . .
 
 ENV HEADLESS=true
+ENV CHROME_BIN=/usr/bin/google-chrome-stable
 EXPOSE 3000
 CMD ["node", "server.js"]

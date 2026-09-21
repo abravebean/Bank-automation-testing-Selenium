@@ -5,6 +5,7 @@ const path = require('path');
 
 const PORT = process.env.PORT || 3000;
 const TESTS_DIR = path.join(__dirname, 'tests');
+const TEST_TIMEOUT_MS = 45000;
 
 const app = express();
 app.use(express.static(path.join(__dirname, 'public')));
@@ -20,13 +21,19 @@ function loadTests() {
     });
 }
 
-// GET /api/tests -> list of available tests (name + description)
+function withTimeout(promise, ms) {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`Test timed out after ${ms / 1000}s`)), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
 app.get('/api/tests', (req, res) => {
   const tests = loadTests().map(({ name, description }) => ({ name, description }));
   res.json(tests);
 });
 
-// POST /api/tests/:name/run -> run a single test by name
 app.post('/api/tests/:name/run', async (req, res) => {
   const tests = loadTests();
   const test = tests.find((t) => t.name === req.params.name);
@@ -36,14 +43,13 @@ app.post('/api/tests/:name/run', async (req, res) => {
 
   const start = Date.now();
   try {
-    const message = await test.run();
+    const message = await withTimeout(test.run(), TEST_TIMEOUT_MS);
     res.json({ name: test.name, passed: true, message: message || 'Passed', durationMs: Date.now() - start });
   } catch (err) {
     res.json({ name: test.name, passed: false, message: err.message, durationMs: Date.now() - start });
   }
 });
 
-// POST /api/tests/run-all -> run every test sequentially, return all results
 app.post('/api/tests/run-all', async (req, res) => {
   const tests = loadTests();
   const results = [];
@@ -51,7 +57,7 @@ app.post('/api/tests/run-all', async (req, res) => {
   for (const test of tests) {
     const start = Date.now();
     try {
-      const message = await test.run();
+      const message = await withTimeout(test.run(), TEST_TIMEOUT_MS);
       results.push({ name: test.name, passed: true, message: message || 'Passed', durationMs: Date.now() - start });
     } catch (err) {
       results.push({ name: test.name, passed: false, message: err.message, durationMs: Date.now() - start });
