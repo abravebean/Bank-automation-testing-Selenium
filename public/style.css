@@ -1,0 +1,118 @@
+:root {
+  --bg: #12161c;
+  --panel: #1a1f27;
+  --border: #2a313c;
+  --text: #e7ebf0;
+  --muted: #8b95a3;
+  --accent: #4f8cff;
+  --pass: #35c98f;
+  --fail: #ef5a6f;
+  --pending: #d8a94f;
+  font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+.wrap {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 48px 24px 80px;
+}
+
+header {
+  margin-bottom: 32px;
+}
+
+h1 {
+  font-size: 28px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  margin: 0 0 6px;
+}
+
+.sub {
+  color: var(--muted);
+  margin: 0 0 20px;
+  font-size: 14px;
+}
+
+.run-all {
+  background: var(--accent);
+  color: #08101f;
+  border: none;
+  border-radius: 8px;
+  padding: 11px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: filter 0.15s ease;
+}
+
+.run-all:hover { filter: brightness(1.08); }
+.run-all:disabled { opacity: 0.5; cursor: default; filter: none; }
+
+.loading {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.test-row {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px 18px;
+  margin-bottom: 10px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 16px;
+  align-items: center;
+}
+
+.test-name {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.test-desc {
+  color: var(--muted);
+  font-size: 13px;
+  grid-column: 1;
+}
+
+.test-run-btn {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 7px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  grid-row: 1;
+  grid-column: 2;
+  justify-self: end;
+}
+
+.test-run-btn:hover { border-color: var(--accent); }
+.test-run-btn:disabled { opacity: 0.5; cursor: default; }
+
+.status {
+  grid-column: 1 / -1;
+  font-size: 13px;
+  font-family: "SF Mono", Consolas, monospace;
+  padding-top: 8px;
+  margin-top: 8px;
+  border-top: 1px dashed var(--border);
+  display: none;
+}
+
+.status.visible { display: block; }
+.status.pass { color: var(--pass); }
+.status.fail { color: var(--fail); }
+.status.pending { color: var(--pending); }
