@@ -16,6 +16,7 @@ function loadTests() {
     .readdirSync(TESTS_DIR)
     .filter((f) => f.endsWith('.test.js'))
     .map((f) => {
+      delete require.cache[require.resolve(path.join(TESTS_DIR, f))];
       const mod = require(path.join(TESTS_DIR, f));
       return { file: f, ...mod };
     });
@@ -34,6 +35,42 @@ app.get('/api/tests', (req, res) => {
   res.json(tests);
 });
 
+function startStream(res) {
+  res.writeHead(200, {
+    'Content-Type': 'application/x-ndjson',
+    'Cache-Control': 'no-cache',
+    Connection: 'keep-alive',
+  });
+}
+
+function writeEvent(res, event) {
+  res.write(JSON.stringify(event) + '\n');
+}
+
+async function runTestStreaming(test, res) {
+  const start = Date.now();
+  const log = (message) => writeEvent(res, { type: 'log', test: test.name, message });
+
+  try {
+    const message = await withTimeout(test.run(log), TEST_TIMEOUT_MS);
+    writeEvent(res, {
+      type: 'result',
+      name: test.name,
+      passed: true,
+      message: message || 'Passed',
+      durationMs: Date.now() - start,
+    });
+  } catch (err) {
+    writeEvent(res, {
+      type: 'result',
+      name: test.name,
+      passed: false,
+      message: err.message,
+      durationMs: Date.now() - start,
+    });
+  }
+}
+
 app.post('/api/tests/:name/run', async (req, res) => {
   const tests = loadTests();
   const test = tests.find((t) => t.name === req.params.name);
@@ -41,30 +78,20 @@ app.post('/api/tests/:name/run', async (req, res) => {
     return res.status(404).json({ name: req.params.name, passed: false, message: 'Test not found' });
   }
 
-  const start = Date.now();
-  try {
-    const message = await withTimeout(test.run(), TEST_TIMEOUT_MS);
-    res.json({ name: test.name, passed: true, message: message || 'Passed', durationMs: Date.now() - start });
-  } catch (err) {
-    res.json({ name: test.name, passed: false, message: err.message, durationMs: Date.now() - start });
-  }
+  startStream(res);
+  await runTestStreaming(test, res);
+  res.end();
 });
 
 app.post('/api/tests/run-all', async (req, res) => {
   const tests = loadTests();
-  const results = [];
+  startStream(res);
 
   for (const test of tests) {
-    const start = Date.now();
-    try {
-      const message = await withTimeout(test.run(), TEST_TIMEOUT_MS);
-      results.push({ name: test.name, passed: true, message: message || 'Passed', durationMs: Date.now() - start });
-    } catch (err) {
-      results.push({ name: test.name, passed: false, message: err.message, durationMs: Date.now() - start });
-    }
+    await runTestStreaming(test, res);
   }
 
-  res.json(results);
+  res.end();
 });
 
 app.listen(PORT, () => {
